@@ -5,7 +5,7 @@
 신입생들과 편입생들 그리고 재학중인 학생들을 위한 공학관 별 Navigation 시스템 구현 및 코로나 시국으로 인한 출입 제한으로 인해 학교에 대해 궁금증을 가질 수 있는 학부모를 위한 어플리케이션 개발
 
 # Using Systems
-Android Studio
+Android Studio //
 SQLite
 JOSM
 QGIS
