@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "104919536377",
+    "project_id": "tukar-585a5",
+    "storage_bucket": "tukar-585a5.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:104919536377:android:1223d3c3620479ecacc828",
+        "android_client_info": {
+          "package_name": "com.tuk.tukar"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "104919536377-3bpb3vuvfucfl77iqdntlg793m4etlaf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tuk.tukar",
+            "certificate_hash": "9113539ce87ca9039e292689dcfeb5cb855c3ab5"
+          }
+        },
+        {
+          "client_id": "104919536377-anirf60eufbutoi1fuqv2aari3s039sg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAgFI6o4Hr7cqN_Qsjh_WW7SrNekGzZfzk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "104919536377-anirf60eufbutoi1fuqv2aari3s039sg.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
