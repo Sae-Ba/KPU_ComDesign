@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.tuk.tukar">
 
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -14,6 +15,13 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Tukar">
         <activity
+            android:name=".LocationPermissionHelper"
+            android:exported="false"
+            tools:ignore="Instantiatable" />
+        <activity
+            android:name=".Viewmap"
+            android:exported="false" />
+        <activity
             android:name=".Loadingpage"
             android:exported="true">
             <intent-filter>
@@ -25,7 +33,7 @@
         <activity android:name=".Mainmenu" />
         <activity android:name=".MainActivity" />
         <activity android:name=".Account" />
-        <activity android:name=".Login"/>
+        <activity android:name=".Login" />
     </application>
 
 </manifest>

@@ -12,4 +12,5 @@
     <string name="unUser">비회원으로 시작하기</string>
     <string name="NewUser">회원가입</string>
     <string name="Login">로그인</string>
+    <string name="mapbox_access_token">sk.eyJ1IjoibmV3aW5kIiwiYSI6ImNsMDloYmdudzBhb3MzanJxYmU0YmcyZGQifQ.C_Y6l4mw0Buoi4Tq4r0PHw</string>
 </resources>

@@ -27,7 +27,7 @@ class Mainmenu : AppCompatActivity() {
             startActivity(intent)
         }
         binding.button6.setOnClickListener {
-            val intent = Intent(this, MainActivity::class.java)
+            val intent = Intent(this, Viewmap::class.java)
             startActivity(intent)
         }
     }
