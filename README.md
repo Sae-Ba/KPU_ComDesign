@@ -21,6 +21,6 @@ Button APIs to show,
 Info APIs
 
 
-!Fixed in 2022/02/21 ver 0.1 written by Sae_Ba (ChoiJiHoon) 
-!Fixed in 2022/03/03 ver 0.2 written by Sae_Ba (ChoiJiHoon)
-!Fixed in 2022/03/20 ver 0.3 written by Sae_Ba (ChoiJiHoon) & Jo Su Yeon
+# !Fixed in 2022/02/21 ver 0.1 written by Sae_Ba (ChoiJiHoon) 
+# !Fixed in 2022/03/03 ver 0.2 written by Sae_Ba (ChoiJiHoon)
+# !Fixed in 2022/03/20 ver 0.3 written by Sae_Ba (ChoiJiHoon) & Jo Su Yeon
