@@ -1,5 +1,4 @@
 package com.tuk.tukar
-
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Toast
@@ -17,7 +16,7 @@ import com.mapbox.maps.plugin.locationcomponent.OnIndicatorPositionChangedListen
 import com.mapbox.maps.plugin.locationcomponent.location
 import java.lang.ref.WeakReference
 
-class Arnavigation_activity : AppCompatActivity() {
+class Arnavigation_search : AppCompatActivity() {
     private lateinit var locationPermissionHelper: LocationPermissionHelper
 
     private val onIndicatorBearingChangedListener = OnIndicatorBearingChangedListener {
@@ -45,7 +44,7 @@ class Arnavigation_activity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         mapView = MapView(this)
-        setContentView(mapView)
+        setContentView(R.layout.activity_arnavigation_search)
         locationPermissionHelper = LocationPermissionHelper(WeakReference(this))
         locationPermissionHelper.checkPermissions {
             onMapReady()
@@ -76,11 +75,11 @@ class Arnavigation_activity : AppCompatActivity() {
             this.enabled = true
             this.locationPuck = LocationPuck2D(
                 bearingImage = AppCompatResources.getDrawable(
-                    this@Arnavigation_activity,
+                    this@Arnavigation_search,
                     R.drawable.userloc,
                 ),
                 shadowImage = AppCompatResources.getDrawable(
-                    this@Arnavigation_activity,
+                    this@Arnavigation_search,
                     R.drawable.userloc,
                 ),
                 scaleExpression = interpolate {
