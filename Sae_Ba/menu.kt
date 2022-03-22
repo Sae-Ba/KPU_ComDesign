@@ -20,7 +20,7 @@ import com.tuk.tukar.databinding.ActivityMenuBinding
 
 
 class Mainmenu : AppCompatActivity() {
-  private lateinit var binding: ActivityMenuBinding
+    private lateinit var binding: ActivityMenuBinding
     private var auth : FirebaseAuth? = null
     private var googleSignInClient : GoogleSignInClient? = null
     private var GOOGLE_LOGIN_CODE = 9001
@@ -37,7 +37,7 @@ class Mainmenu : AppCompatActivity() {
             .build()
         googleSignInClient = GoogleSignIn.getClient(this,gso)
 
-        binding.loginButton.setOnClickListener {
+        binding.btnGoogleSignIn.setOnClickListener {
             googleLogin()
         }
         binding.button6.setOnClickListener {
