@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".Non_member_menu"
-    android:background="#FFFFFFFF">>
+    android:background="#FFFFFFFF">
 
 
     <Button
