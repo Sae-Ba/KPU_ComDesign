@@ -5,23 +5,22 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#FFFFFFFF"
-    tools:context=".ARNavigation_first">
+    tools:context=".Arnavigation_search">
 
 
     <TextView
         android:id="@+id/textView3"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="40dp"
-        android:layout_marginTop="44dp"
+        android:layout_marginStart="34dp"
+        android:layout_marginTop="50dp"
         android:text="AR 길찾기"
-        android:textColor="@color/purple_500"
+        android:textColor="@color/tu_blue"
         android:textColorHint="#585FFE"
         android:textSize="28sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/imageView2"
-        tools:ignore="MissingConstraints" />
+        app:layout_constraintTop_toBottomOf="@+id/imageView2" />
 
     <ImageView
         android:id="@+id/imageView2"
@@ -38,10 +37,14 @@
     <SearchView
         android:id="@+id/searchView"
         style="@android:style/Widget.Material.Light.SearchView"
-        android:layout_width="321dp"
+        android:layout_width="280dp"
         android:layout_height="65dp"
+        android:layout_marginStart="16dp"
         android:layout_marginTop="100dp"
-        android:background="@color/white"
+        android:layout_marginEnd="16dp"
+        android:background="@color/purple_500"
+        android:backgroundTint="@color/tu_blue"
+        android:foregroundTint="@color/white"
         android:iconifiedByDefault="false"
         android:queryHint="공학관, 건물을 입력하세요."
         app:layout_constraintEnd_toEndOf="parent"
@@ -49,14 +52,16 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/imageView2" />
 
-    <ImageView
-        android:id="@+id/imageView3"
-        android:layout_width="415dp"
-        android:layout_height="350dp"
-        android:src="@drawable/vrmap"
-        app:layout_constraintBottom_toBottomOf="parent"
+    <com.mapbox.maps.MapView
+        android:id="@+id/mapView"
+        android:layout_width="279dp"
+        android:layout_height="300dp"
+        android:layout_marginTop="30dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/searchView"
-        app:layout_constraintVertical_bias="1.0" />
+        app:mapbox_cameraTargetLat="40.7128"
+        app:mapbox_cameraTargetLng="-74.0060"
+        app:mapbox_cameraZoom="9.0" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
