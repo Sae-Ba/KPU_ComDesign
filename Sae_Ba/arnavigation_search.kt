@@ -79,10 +79,8 @@ class Arnavigationsearch : AppCompatActivity(), OnMapReadyCallback, PermissionsL
                 NavigationLauncher.startNavigation(this, options)
             }
             btnStartwithar.setOnClickListener{v :View?->
-                    intent.putExtra("originlong",locationComponent!!.lastKnownLocation!!.longitude)
-                    intent.putExtra("originlate",locationComponent!!.lastKnownLocation!!.longitude)
-                    startActivity(intent)
-             
+                val intent=Intent(this,arnavigation::class.java)
+                startActivity(intent)
             }
             initSearchFab()
             setUpSource(style!!)
@@ -161,19 +159,10 @@ class Arnavigationsearch : AppCompatActivity(), OnMapReadyCallback, PermissionsL
 
         getRoute(originPoint, destinationPoint)
         btnStart!!.isEnabled = true
-        btnStart!!.setBackgroundResource(R.color.mapboxBlue)
-        return true
-
         btnStartwithar!!.isEnabled = true
-        btnStartwithar!!.setBackgroundResource(R.color.mapboxBlue)
+        btnStart!!.setBackgroundResource(R.color.tu_mint2)
+        btnStartwithar!!.setBackgroundResource(R.color.tu_mint2)
         return true
-        btnStartwithar.setOnClickListener{
-            intent.putExtra("originlong",locationComponent!!.lastKnownLocation!!.longitude)
-            intent.putExtra("originlate",locationComponent!!.lastKnownLocation!!.longitude)
-            intent.putExtra("destilong",point.latitude)
-            intent.putExtra("destilate",point.latitude)
-            startActivity(intent)
-        }
     }
 
     private fun getRoute(origin: Point, destination: Point) {
