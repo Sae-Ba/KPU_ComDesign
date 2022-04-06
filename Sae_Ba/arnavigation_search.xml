@@ -60,3 +60,5 @@
 
 
 </RelativeLayout>
+    <string name="start_navigation">Navi</string>
+    <string name="arnavi">AR</string>
