@@ -169,13 +169,8 @@ open class arnavigation : baseActivity(), RouteListener, ProgressChangeListener,
     }
 
     private fun initDirectionsRoute() {
-        val originlng = intent.getDoubleExtra("originlong",123.5)
-        val originlat = intent.getDoubleExtra("originlate",123.5)
-        val destilng = intent.getDoubleExtra("destilong",123.5)
-        val destilat = intent.getDoubleExtra("destilate",123.5)
-
-        val originpoint = Point.fromLngLat(originlng, originlat)
-        val destinationpoint = Point.fromLngLat(destilng, destilat)
+        val originpoint = Point.fromLngLat(126.73491, 37.33978)
+        val destinationpoint = Point.fromLngLat(126.73412,37.34057)
 
         NavigationRoute.builder(this)
             .accessToken(getString(R.string.mapbox_access_token))
