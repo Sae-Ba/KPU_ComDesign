@@ -78,6 +78,14 @@ class Arnavigationsearch : AppCompatActivity(), OnMapReadyCallback, PermissionsL
 
                 NavigationLauncher.startNavigation(this, options)
             }
+            btnStartwithar.setOnClickListener{v :View?->
+                btnStartwithar.setOnClickListener{
+                    intent.putExtra("originlong",locationComponent!!.lastKnownLocation!!.longitude)
+                    intent.putExtra("originlate",locationComponent!!.lastKnownLocation!!.longitude)
+                    startActivity(intent)
+                }
+                
+            }
             initSearchFab()
             setUpSource(style!!)
             setUpLayer(style!!)
