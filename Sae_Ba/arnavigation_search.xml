@@ -50,9 +50,10 @@
             android:layout_gravity="end|bottom"
             android:layout_margin="16dp"
             android:layout_weight="2"
-            android:tint="@android:color/white"
-            app:backgroundTint="@color/colorPrimary"
-            app:srcCompat="@android:drawable/ic_search_category_default" />
+            android:tint="@color/tu_sky_blue"
+            app:backgroundTint="@color/tu_sky_blue"
+            app:srcCompat="@android:drawable/ic_search_category_default"
+            android:contentDescription="TODO" />
 
 
     </LinearLayout>
