@@ -1,18 +1,13 @@
 package com.tuk.tukar
 
-import android.content.Intent
 import android.location.Location
 import android.widget.Toast
-import com.mapbox.android.core.location.LocationEngineCallback
-import com.mapbox.android.core.location.LocationEngineProvider
-import com.mapbox.android.core.location.LocationEngineRequest
-import com.mapbox.android.core.location.LocationEngineResult
+import com.mapbox.android.core.location.*
 import com.mapbox.api.directions.v5.models.DirectionsResponse
 import com.mapbox.api.directions.v5.models.DirectionsRoute
 import com.mapbox.core.constants.Constants
 import com.mapbox.geojson.Point
 import com.mapbox.geojson.utils.PolylineUtils
-import com.mapbox.mapboxsdk.location.LocationComponent
 import com.mapbox.services.android.navigation.v5.navigation.MapboxNavigation
 import com.mapbox.services.android.navigation.v5.navigation.MapboxNavigationOptions
 import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute
@@ -38,15 +33,20 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 
-open class arnavigation : baseActivity(), RouteListener, ProgressChangeListener, OffRouteListener {
+
+class arnavigation() : BaseActivity(), RouteListener,
+    ProgressChangeListener, OffRouteListener {
     companion object {
-        var TAG = arnavigation::class.java.simpleName
+        private var TAG = arnavigation::class.java.simpleName
     }
 
+    // Handles navigation.
     private lateinit var mapboxNavigation: MapboxNavigation
+    // Fetches route from points.
     private lateinit var routeFetcher: RouteFetcher
     private lateinit var lastRouteProgress: RouteProgress
     private lateinit var directionsRoute: DirectionsRoute
+
     private var visionManagerWasInit = false
     private var navigationWasStarted = false
 
@@ -69,8 +69,8 @@ open class arnavigation : baseActivity(), RouteListener, ProgressChangeListener,
         }
     }
 
-    // This dummy points will be used to build route. For real world test this needs to be changed to real values for
-    // source and target locations.
+    private val ROUTE_ORIGIN = Point.fromLngLat(126.73231, 37.34163)
+    private val ROUTE_DESTINATION = Point.fromLngLat(126.73412, 37.34057)
 
     protected open fun setArRenderOptions(visionArView: VisionArView) {
         visionArView.setFenceVisible(true)
@@ -82,7 +82,7 @@ open class arnavigation : baseActivity(), RouteListener, ProgressChangeListener,
     }
 
     override fun initViews() {
-        setContentView(R.layout.activity_arnavigation)
+        setContentView(R.layout.arnavigation_activity)
     }
 
     override fun onStart() {
@@ -99,6 +99,7 @@ open class arnavigation : baseActivity(), RouteListener, ProgressChangeListener,
 
     private fun startVisionManager() {
         if (allPermissionsGranted() && !visionManagerWasInit) {
+            // Create and start VisionManager.
             VisionManager.create()
             VisionManager.setModelPerformance(
                 ModelPerformance.On(
@@ -108,6 +109,8 @@ open class arnavigation : baseActivity(), RouteListener, ProgressChangeListener,
             )
             VisionManager.start()
             VisionManager.visionEventsListener = object : VisionEventsListener {}
+
+            // Create VisionArManager.
             VisionArManager.create(VisionManager)
             mapbox_ar_view.setArManager(VisionArManager)
             setArRenderOptions(mapbox_ar_view)
@@ -128,12 +131,14 @@ open class arnavigation : baseActivity(), RouteListener, ProgressChangeListener,
 
     private fun startNavigation() {
         if (allPermissionsGranted() && !navigationWasStarted) {
+            // Initialize navigation with your Mapbox access token.
             mapboxNavigation = MapboxNavigation(
                 this,
                 getString(R.string.mapbox_access_token),
                 MapboxNavigationOptions.builder().build()
             )
 
+            // Initialize route fetcher with your Mapbox access token.
             routeFetcher = RouteFetcher(this, getString(R.string.mapbox_access_token))
             routeFetcher.addRouteListener(this)
 
@@ -149,6 +154,7 @@ open class arnavigation : baseActivity(), RouteListener, ProgressChangeListener,
 
             initDirectionsRoute()
 
+            // Route need to be reestablished if off route happens.
             mapboxNavigation.addOffRouteListener(this)
             mapboxNavigation.addProgressChangeListener(this)
 
@@ -169,13 +175,10 @@ open class arnavigation : baseActivity(), RouteListener, ProgressChangeListener,
     }
 
     private fun initDirectionsRoute() {
-        val originpoint = Point.fromLngLat(126.73491, 37.33978)
-        val destinationpoint = Point.fromLngLat(126.73412,37.34057)
-
         NavigationRoute.builder(this)
             .accessToken(getString(R.string.mapbox_access_token))
-            .origin(originpoint)
-            .destination(destinationpoint)
+            .origin(ROUTE_ORIGIN)
+            .destination(ROUTE_DESTINATION)
             .build()
             .getRoute(object : Callback<DirectionsResponse> {
                 override fun onResponse(
@@ -189,6 +192,7 @@ open class arnavigation : baseActivity(), RouteListener, ProgressChangeListener,
                     directionsRoute = response.body()!!.routes()[0]
                     mapboxNavigation.startNavigation(directionsRoute)
 
+                    // Set route progress.
                     VisionArManager.setRoute(
                         Route(
                             directionsRoute.getRoutePoints(),
@@ -221,6 +225,7 @@ open class arnavigation : baseActivity(), RouteListener, ProgressChangeListener,
 
             val route = response.routes()[0]
 
+            // Set route progress.
             VisionArManager.setRoute(
                 Route(
                     route.getRoutePoints(),
