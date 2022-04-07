@@ -78,10 +78,11 @@ class Arnavigationsearch : AppCompatActivity(), OnMapReadyCallback, PermissionsL
 
                 NavigationLauncher.startNavigation(this, options)
             }
-            btnStartwithar.setOnClickListener{v :View?->
+            btnStartwithar.setOnClickListener{v: View? ->
                 val intent=Intent(this,arnavigation::class.java)
                 startActivity(intent)
             }
+
             initSearchFab()
             setUpSource(style!!)
             setUpLayer(style!!)
@@ -127,7 +128,7 @@ class Arnavigationsearch : AppCompatActivity(), OnMapReadyCallback, PermissionsL
                     mapboxMap!!.animateCamera(CameraUpdateFactory.newCameraPosition(CameraPosition.Builder()
                         .target(LatLng((selectedCarmenFeature.geometry() as Point?)!!.latitude(),
                             (selectedCarmenFeature.geometry() as Point?)!!.longitude()))
-                        .zoom(14.0)
+                        .zoom(16.5)
                         .build()), 4000)
                 }
             }
@@ -135,7 +136,7 @@ class Arnavigationsearch : AppCompatActivity(), OnMapReadyCallback, PermissionsL
     }
 
     private fun addDestinationIconSymbolLayer(loadedMapStyle: Style?) {
-        loadedMapStyle!!.addImage("destination-icon-id", BitmapFactory.decodeResource(this.resources, R.drawable.red_marker))
+        loadedMapStyle!!.addImage("destination-icon-id", BitmapFactory.decodeResource(this.resources, R.drawable.ic_location_on_red_24dp))
 
         val geoJsonSource = GeoJsonSource("destination-source-id")
         loadedMapStyle.addSource(geoJsonSource)
@@ -160,8 +161,8 @@ class Arnavigationsearch : AppCompatActivity(), OnMapReadyCallback, PermissionsL
         getRoute(originPoint, destinationPoint)
         btnStart!!.isEnabled = true
         btnStartwithar!!.isEnabled = true
-        btnStart!!.setBackgroundResource(R.color.tu_mint2)
-        btnStartwithar!!.setBackgroundResource(R.color.tu_mint2)
+        btnStart!!.setBackgroundResource(R.color.mapboxBlue)
+        btnStartwithar!!.setBackgroundResource(R.color.mapboxBlue)
         return true
     }
 
