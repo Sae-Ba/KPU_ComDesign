@@ -15,7 +15,7 @@ import com.mapbox.vision.mobile.core.utils.SystemInfoUtils.obtainSystemInfo
 import com.mapbox.vision.utils.VisionLogger.Companion.e
 
 
-abstract class baseActivity : AppCompatActivity() {
+abstract class BaseActivity : AppCompatActivity() {
     protected abstract fun onPermissionsGranted()
     protected abstract fun initViews()
     override fun onCreate(savedInstanceState: Bundle?) {
