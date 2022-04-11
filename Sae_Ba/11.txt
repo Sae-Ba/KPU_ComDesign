@@ -1,16 +1,35 @@
+TukAR.java
+package com.tuk.tukar;
+
+import android.app.Application;
+import android.util.Log;
+
+import com.mapbox.mapboxsdk.Mapbox;
+import com.mapbox.vision.VisionManager;
+
+public class TukAR extends Application {
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        VisionManager.init(this, getResources().getString(R.string.mapbox_access_token));
+        Mapbox.getInstance(this, getString(R.string.mapbox_access_token));
+    }
+}
+
+
+arnavigation.kt
 package com.tuk.tukar
 
+import android.app.Activity
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
-import android.os.Build
 import android.os.Bundle
-import android.text.method.LinkMovementMethod
-import android.widget.TextView
+import android.view.WindowManager
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.core.text.HtmlCompat
 import com.mapbox.android.core.location.LocationEngineCallback
 import com.mapbox.android.core.location.LocationEngineProvider
 import com.mapbox.android.core.location.LocationEngineRequest
@@ -20,10 +39,8 @@ import com.mapbox.api.directions.v5.models.DirectionsRoute
 import com.mapbox.core.constants.Constants
 import com.mapbox.geojson.Point
 import com.mapbox.geojson.utils.PolylineUtils
-import com.mapbox.mapboxsdk.location.LocationComponent
 import com.mapbox.services.android.navigation.v5.navigation.MapboxNavigation
 import com.mapbox.services.android.navigation.v5.navigation.MapboxNavigationOptions
-import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute
 import com.mapbox.services.android.navigation.v5.offroute.OffRouteListener
 import com.mapbox.services.android.navigation.v5.route.RouteFetcher
 import com.mapbox.services.android.navigation.v5.route.RouteListener
@@ -37,90 +54,79 @@ import com.mapbox.vision.ar.core.models.RoutePoint
 import com.mapbox.vision.ar.view.gl.VisionArView
 import com.mapbox.vision.mobile.core.interfaces.VisionEventsListener
 import com.mapbox.vision.mobile.core.models.position.GeoCoordinate
-import com.mapbox.vision.mobile.core.utils.SystemInfoUtils
 import com.mapbox.vision.performance.ModelPerformance
 import com.mapbox.vision.performance.ModelPerformanceMode
 import com.mapbox.vision.performance.ModelPerformanceRate
 import com.mapbox.vision.utils.VisionLogger
 import kotlinx.android.synthetic.main.activity_arnavigation.*
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
 
-class arnavigation : AppCompatActivity(), RouteListener, ProgressChangeListener, OffRouteListener {
+
+class Arnavigation : AppCompatActivity(),
+    RouteListener, ProgressChangeListener,
+    OffRouteListener {
+
     companion object {
-        var TAG = arnavigation::class.java.simpleName
-        private const val PERMISSION_FOREGROUND_SERVICE = "android.permission.FOREGROUND_SERVICE"
-        private const val PERMISSIONS_REQUEST_CODE = 123
+        private var TAG = Arnavigation::class.java.simpleName
+
+        private const val LOCATION_INTERVAL_DEFAULT = 0L
+        private const val LOCATION_INTERVAL_FAST = 1000L
+
+        var directionsRoute: DirectionsRoute? = null
+
+        fun start(context: Activity) {
+            context.startActivity(Intent(context, Arnavigation::class.java))
+        }
     }
     private lateinit var mapboxNavigation: MapboxNavigation
     private lateinit var routeFetcher: RouteFetcher
     private lateinit var lastRouteProgress: RouteProgress
-    private lateinit var directionsRoute: DirectionsRoute
     private var visionManagerWasInit = false
     private var navigationWasStarted = false
+    private val PERMISSION_FOREGROUND_SERVICE = "android.permission.FOREGROUND_SERVICE"
+    private val PERMISSIONS_REQUEST_CODE = 123
 
     private val arLocationEngine by lazy {
         LocationEngineProvider.getBestLocationEngine(this)
     }
 
-    private val arLocationEngineRequest by lazy {
-        LocationEngineRequest.Builder(0)
-            .setPriority(LocationEngineRequest.PRIORITY_HIGH_ACCURACY)
-            .setFastestInterval(1000)
-            .build()
-    }
-
     private val locationCallback by lazy {
         object : LocationEngineCallback<LocationEngineResult> {
-            override fun onSuccess(result: LocationEngineResult?) {}
+            override fun onSuccess(result: LocationEngineResult?) {
+            }
 
-            override fun onFailure(exception: Exception) {}
+            override fun onFailure(exception: Exception) {
+            }
         }
     }
-    
+    protected open fun setArRenderOptions(visionArView: VisionArView) {
+
+        visionArView.setFenceVisible(true)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         super.onCreate(savedInstanceState)
-        if (!SystemInfoUtils.isVisionSupported()) {
-            val textView = TextView(this)
-            val padding = dpToPx(20f).toInt()
-            textView.setPadding(padding, padding, padding, padding)
-            textView.movementMethod = LinkMovementMethod.getInstance()
-            textView.isClickable = true
-            textView.text = HtmlCompat.fromHtml(
-                getString(R.string.vision_not_supported_message),
-                HtmlCompat.FROM_HTML_MODE_LEGACY
-            )
-            AlertDialog.Builder(this)
-                .setTitle(R.string.vision_not_supported_title)
-                .setView(textView)
-                .setCancelable(false)
-                .show()
-            VisionLogger.e(
-                "BoardNotSupported",
-                "System Info: [" + SystemInfoUtils.obtainSystemInfo() + "]"
-            )
-        }
-        setContentView(R.layout.activity_arnavigation)
-
-        title = getString(R.string.app_name) + " " + this.javaClass.simpleName
-        if (!allPermissionsGranted() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            requestPermissions(requiredPermissions, PERMISSIONS_REQUEST_CODE)
-        } else {
-            onPermissionsGranted()
-        }
+        this.setContentView(R.layout.activity_arnavigation)
+        onPermissionsGranted()
     }
-    
+
+    private val arLocationEngineRequest by lazy {
+        LocationEngineRequest.Builder(LOCATION_INTERVAL_DEFAULT)
+            .setPriority(LocationEngineRequest.PRIORITY_HIGH_ACCURACY)
+            .setFastestInterval(LOCATION_INTERVAL_FAST)
+            .build()
+    }
+    private fun onPermissionsGranted() {
+        startVisionManager()
+        startNavigation()
+    }
     private fun allPermissionsGranted(): Boolean {
-        for (permission in requiredPermissions) {
+        for (permission in getRequiredPermissions()!!) {
             if (ContextCompat.checkSelfPermission(
                     this,
-                    permission
+                    permission!!
                 ) != PackageManager.PERMISSION_GRANTED
             ) {
-                // PERMISSION_FOREGROUND_SERVICE was added for targetSdkVersion >= 28, it is normal and always granted, but should be added to the Manifest file
-                // on devices with Android < P(9) checkSelfPermission(PERMISSION_FOREGROUND_SERVICE) can return PERMISSION_DENIED, but in fact it is GRANTED, so skip it
-                // https://developer.android.com/guide/components/services#Foreground
                 if (permission == PERMISSION_FOREGROUND_SERVICE) {
                     continue
                 }
@@ -129,29 +135,24 @@ class arnavigation : AppCompatActivity(), RouteListener, ProgressChangeListener,
         }
         return true
     }
-    private val requiredPermissions: Array<String>
-        get() {
-            val permissions: Array<String> = try {
-                val info =
-                    packageManager.getPackageInfo(packageName, PackageManager.GET_PERMISSIONS)
-                val requestedPermissions = info.requestedPermissions
-                if (requestedPermissions != null && requestedPermissions.isNotEmpty()) {
-                    requestedPermissions
-                } else {
-                    arrayOf()
-                }
-            } catch (e: PackageManager.NameNotFoundException) {
+    private fun getRequiredPermissions(): Array<String?>? {
+        val permissions: Array<String?>
+        permissions = try {
+            val info = packageManager.getPackageInfo(packageName, PackageManager.GET_PERMISSIONS)
+            val requestedPermissions = info.requestedPermissions
+            if (requestedPermissions != null && requestedPermissions.size > 0) {
+                requestedPermissions
+            } else {
                 arrayOf()
             }
-            return permissions
+        } catch (e: PackageManager.NameNotFoundException) {
+            arrayOf()
         }
-
-    private fun dpToPx(dp: Float): Float {
-        return dp * applicationContext.resources.displayMetrics.density
+        return permissions
     }
     override fun onRequestPermissionsResult(
         requestCode: Int,
-        permissions: Array<String>,
+        permissions: Array<String?>,
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
@@ -159,33 +160,19 @@ class arnavigation : AppCompatActivity(), RouteListener, ProgressChangeListener,
             onPermissionsGranted()
         }
     }
-
-   
-    
-    private fun setArRenderOptions(visionArView: VisionArView) {
-        visionArView.setFenceVisible(true)
-    }
-
-    private fun onPermissionsGranted() {
-        startVisionManager()
-        startNavigation()
-    }
-
-
     override fun onStart() {
         super.onStart()
         startVisionManager()
         startNavigation()
     }
-
     override fun onStop() {
         super.onStop()
         stopVisionManager()
         stopNavigation()
     }
-
     private fun startVisionManager() {
-        if (allPermissionsGranted() && !visionManagerWasInit) {
+        if (allPermissionsGranted() && !navigationWasStarted) {
+
             VisionManager.create()
             VisionManager.setModelPerformance(
                 ModelPerformance.On(
@@ -195,14 +182,23 @@ class arnavigation : AppCompatActivity(), RouteListener, ProgressChangeListener,
             )
             VisionManager.start()
             VisionManager.visionEventsListener = object : VisionEventsListener {}
+
             VisionArManager.create(VisionManager)
             mapbox_ar_view.setArManager(VisionArManager)
             setArRenderOptions(mapbox_ar_view)
 
             visionManagerWasInit = true
+            directionsRoute.let {
+                if (it == null) {
+                    Toast.makeText(this, "Route is not set!", Toast.LENGTH_LONG).show()
+                    finish()
+                } else {
+                    setRoute(it)
+                }
+            }
+
         }
     }
-
     private fun stopVisionManager() {
         if (visionManagerWasInit) {
             VisionArManager.destroy()
@@ -221,6 +217,7 @@ class arnavigation : AppCompatActivity(), RouteListener, ProgressChangeListener,
                 MapboxNavigationOptions.builder().build()
             )
 
+            // Initialize route fetcher with your Mapbox access token.
             routeFetcher = RouteFetcher(this, getString(R.string.mapbox_access_token))
             routeFetcher.addRouteListener(this)
 
@@ -234,15 +231,15 @@ class arnavigation : AppCompatActivity(), RouteListener, ProgressChangeListener,
                 VisionLogger.e(TAG, se.toString())
             }
 
-            initDirectionsRoute()
 
+            // Route need to be reestablished if off route happens.
             mapboxNavigation.addOffRouteListener(this)
             mapboxNavigation.addProgressChangeListener(this)
 
             navigationWasStarted = true
+
         }
     }
-
     private fun stopNavigation() {
         if (navigationWasStarted) {
             arLocationEngine.removeLocationUpdates(locationCallback)
@@ -255,42 +252,8 @@ class arnavigation : AppCompatActivity(), RouteListener, ProgressChangeListener,
         }
     }
 
-    private fun initDirectionsRoute() {
-        val originpoint = Point.fromLngLat(126.73491, 37.33978)
-        val destinationpoint = Point.fromLngLat(126.73412,37.34057)
 
-        NavigationRoute.builder(this)
-            .accessToken(getString(R.string.mapbox_access_token))
-            .origin(originpoint)
-            .destination(destinationpoint)
-            .build()
-            .getRoute(object : Callback<DirectionsResponse> {
-                override fun onResponse(
-                    call: Call<DirectionsResponse>,
-                    response: Response<DirectionsResponse>
-                ) {
-                    if (response.body() == null || response.body()!!.routes().isEmpty()) {
-                        return
-                    }
 
-                    directionsRoute = response.body()!!.routes()[0]
-                    mapboxNavigation.startNavigation(directionsRoute)
-
-                    VisionArManager.setRoute(
-                        Route(
-                            directionsRoute.getRoutePoints(),
-                            directionsRoute.duration()?.toFloat() ?: 0f,
-                            "",
-                            ""
-                        )
-                    )
-                }
-
-                override fun onFailure(call: Call<DirectionsResponse>, t: Throwable) {
-                    t.printStackTrace()
-                }
-            })
-    }
 
     override fun onErrorReceived(throwable: Throwable?) {
         throwable?.printStackTrace()
@@ -303,21 +266,12 @@ class arnavigation : AppCompatActivity(), RouteListener, ProgressChangeListener,
         mapboxNavigation.stopNavigation()
         if (response.routes().isEmpty()) {
             Toast.makeText(this, "Can not calculate the route requested", Toast.LENGTH_SHORT).show()
-        } else {
-            mapboxNavigation.startNavigation(response.routes()[0])
-
-            val route = response.routes()[0]
-
-            VisionArManager.setRoute(
-                Route(
-                    route.getRoutePoints(),
-                    route.duration()?.toFloat() ?: 0f,
-                    "",
-                    ""
-                )
-            )
         }
+        lastRouteProgress = routeProgress!!
+
+        setRoute(response.routes()[0])
     }
+
 
     override fun onProgressChange(location: Location, routeProgress: RouteProgress) {
         lastRouteProgress = routeProgress
@@ -329,14 +283,14 @@ class arnavigation : AppCompatActivity(), RouteListener, ProgressChangeListener,
 
     private fun DirectionsRoute.getRoutePoints(): Array<RoutePoint> {
         val routePoints = arrayListOf<RoutePoint>()
-        legs()?.forEach { leg ->
-            leg.steps()?.forEach { step ->
+        legs()?.forEach { it ->
+            it.steps()?.forEach { step ->
                 val maneuverPoint = RoutePoint(
                     GeoCoordinate(
                         latitude = step.maneuver().location().latitude(),
                         longitude = step.maneuver().location().longitude()
                     ),
-                    step.maneuver().type().mapToManeuverType()
+                            step.maneuver().type().mapToManeuverType()
                 )
                 routePoints.add(maneuverPoint)
 
@@ -358,6 +312,7 @@ class arnavigation : AppCompatActivity(), RouteListener, ProgressChangeListener,
 
         return routePoints.toTypedArray()
     }
+
 
     private fun String.buildStepPointsFromGeometry(): List<Point> {
         return PolylineUtils.decode(this, Constants.PRECISION_6)
@@ -382,4 +337,449 @@ class arnavigation : AppCompatActivity(), RouteListener, ProgressChangeListener,
         "exit rotary" -> ManeuverType.RoundaboutExit
         else -> ManeuverType.None
     }
+    private fun setRoute(route: DirectionsRoute) {
+        mapboxNavigation.startNavigation(route)
+
+
+        VisionArManager.setRoute(Route(
+            points = route.getRoutePoints(),
+            eta = route.duration()?.toFloat() ?: 0f,
+            "Source Location",
+            "Destination Location"
+        )
+        )
+    }
+
+
 }
+
+arnavigation_search.kt
+package com.tuk.tukar
+
+import android.annotation.SuppressLint
+import android.content.Intent
+import android.graphics.BitmapFactory
+import android.graphics.Color
+import android.os.Bundle
+import android.os.PersistableBundle
+import android.util.Log
+import android.view.View
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.res.ResourcesCompat
+import com.mapbox.android.core.location.LocationEngineCallback
+import com.mapbox.android.core.location.LocationEngineProvider
+import com.mapbox.android.core.location.LocationEngineRequest
+import com.mapbox.android.core.location.LocationEngineResult
+import com.mapbox.android.core.permissions.PermissionsListener
+import com.mapbox.android.core.permissions.PermissionsManager
+import com.mapbox.api.directions.v5.models.DirectionsResponse
+import com.mapbox.api.directions.v5.models.DirectionsRoute
+import com.mapbox.geojson.Feature
+import com.mapbox.geojson.FeatureCollection
+import com.mapbox.geojson.Point
+import com.mapbox.mapboxsdk.Mapbox
+import com.mapbox.mapboxsdk.annotations.Marker
+import com.mapbox.mapboxsdk.annotations.MarkerOptions
+import com.mapbox.mapboxsdk.camera.CameraPosition
+import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
+import com.mapbox.mapboxsdk.geometry.LatLng
+import com.mapbox.mapboxsdk.location.LocationComponent
+import com.mapbox.mapboxsdk.location.modes.CameraMode
+import com.mapbox.mapboxsdk.maps.MapboxMap
+import com.mapbox.mapboxsdk.maps.OnMapReadyCallback
+import com.mapbox.mapboxsdk.maps.Style
+import com.mapbox.mapboxsdk.plugins.places.autocomplete.PlaceAutocomplete
+import com.mapbox.mapboxsdk.plugins.places.autocomplete.model.PlaceOptions
+import com.mapbox.mapboxsdk.style.layers.PropertyFactory
+import com.mapbox.mapboxsdk.style.layers.SymbolLayer
+import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
+import com.mapbox.mapboxsdk.utils.BitmapUtils
+import com.mapbox.services.android.navigation.ui.v5.NavigationLauncher
+import com.mapbox.services.android.navigation.ui.v5.NavigationLauncherOptions
+import com.mapbox.services.android.navigation.ui.v5.route.NavigationMapRoute
+import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute
+import com.mapbox.services.android.navigation.v5.route.RouteListener
+import com.mapbox.vision.utils.VisionLogger
+import kotlinx.android.synthetic.main.activity_arnavigation_search.*
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+
+class Arnavigationsearch : AppCompatActivity(), OnMapReadyCallback, PermissionsListener, MapboxMap.OnMapClickListener {
+
+    companion object {
+        private var TAG = Arnavigation::class.java.simpleName
+
+    }
+    private var originPoint: Point? = null
+    private var destinationMarker: Marker? = null
+
+    private val REQUEST_CODE_AUTOCOMPLETE = 7171
+    private var mapboxMap: MapboxMap? = null
+    private var permissionsManager: PermissionsManager? = null
+    private var locationComponent: LocationComponent? = null
+    private var currentRoute: DirectionsRoute? = null
+    private var navigationMapRoute: NavigationMapRoute? = null
+    private val TAG = "DirectionsActivity"
+    private val geoJsonSourceLayerId = "GeoJsonSourceLayerId"
+    private val symbolIconId = "SymbolIconId"
+    private val arLocationEngine by lazy {
+        LocationEngineProvider.getBestLocationEngine(this)
+    }
+
+    private val arLocationEngineRequest by lazy {
+        LocationEngineRequest.Builder(0)
+            .setPriority(LocationEngineRequest.PRIORITY_HIGH_ACCURACY)
+            .build()
+    }
+    private val locationCallback by lazy {
+        object : LocationEngineCallback<LocationEngineResult> {
+            override fun onSuccess(result: LocationEngineResult?) {
+                with(result as LocationEngineResult) {
+                    originPoint = Point.fromLngLat(lastLocation?.longitude ?: .0, lastLocation?.latitude ?: .0)
+                }
+            }
+
+            override fun onFailure(exception: Exception) {
+            }
+        }
+    }
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        Mapbox.getInstance(this, getString(R.string.mapbox_access_token))
+        setContentView(R.layout.activity_arnavigation_search)
+        mapView.onCreate(savedInstanceState)
+        mapView.getMapAsync(this)
+    }
+    override fun onMapReady(mapboxMap: MapboxMap) {
+        this.mapboxMap = mapboxMap
+        mapboxMap.setStyle(getString(com.mapbox.services.android.navigation.ui.v5.R.string.navigation_guidance_day)) {
+                style: Style? ->
+            enableLocationComponent(style)
+            mapboxMap.addOnMapClickListener(this)
+
+            btnStart.setOnClickListener { v: View? ->
+                val simulateRoute = true
+                val options = NavigationLauncherOptions.builder()
+                    .directionsRoute(currentRoute)
+                    .shouldSimulateRoute(simulateRoute)
+                    .build()
+
+                NavigationLauncher.startNavigation(this, options)
+            }
+            btnStartwithar.setOnClickListener {
+                if (currentRoute == null) {
+                    Toast.makeText(this, "Route is not ready yet!", Toast.LENGTH_LONG).show()
+                } else {
+                    Arnavigation.directionsRoute = currentRoute
+                    Arnavigation.start(this)
+                    val intent = Intent(this@Arnavigationsearch, Arnavigation::class.java)
+
+                    startActivity(intent)
+                }
+            }
+
+            initSearchFab()
+            setUpSource(style!!)
+            setUpLayer(style!!)
+
+            val drawable = ResourcesCompat.getDrawable(resources, R.drawable.ic_location_on_red_24dp, null)
+            val bitmapUtils = BitmapUtils.getBitmapFromDrawable(drawable)
+            style!!.addImage(symbolIconId, bitmapUtils!!)
+        }
+    }
+    private fun setUpLayer(loadedMapStyle: Style) {
+        loadedMapStyle.addLayer(SymbolLayer("SYMBOL_LAYER_ID", geoJsonSourceLayerId).withProperties(
+            PropertyFactory.iconImage(symbolIconId),
+            PropertyFactory.iconOffset(arrayOf(0f, -8f))
+        ))
+    }
+
+    private fun setUpSource(loadedMapStyle: Style) {
+        loadedMapStyle.addSource(GeoJsonSource(geoJsonSourceLayerId))
+    }
+
+    private fun initSearchFab() {
+        fab_location_search.setOnClickListener{v: View? ->
+            val intent = PlaceAutocomplete.IntentBuilder()
+                .accessToken(
+                    (if (Mapbox.getAccessToken() != null) Mapbox.getAccessToken() else getString(R.string.mapbox_access_token))!!
+                ).placeOptions(PlaceOptions.builder()
+                    .backgroundColor(Color.parseColor("#EEEEEE"))
+                    .limit(10)
+                    .build(PlaceOptions.MODE_CARDS))
+                .build(this@Arnavigationsearch)
+            startActivityForResult(intent, REQUEST_CODE_AUTOCOMPLETE)
+        }
+    }
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode == RESULT_OK && requestCode == REQUEST_CODE_AUTOCOMPLETE) {
+            val selectedCarmenFeature = PlaceAutocomplete.getPlace(data)
+            if (mapboxMap != null) {
+                val style = mapboxMap!!.style
+                if (style != null) {
+                    val source = style.getSourceAs<GeoJsonSource>(geoJsonSourceLayerId)
+                    source?.setGeoJson(FeatureCollection.fromFeatures(arrayOf(Feature.fromJson(selectedCarmenFeature.toJson()))))
+                    mapboxMap!!.animateCamera(CameraUpdateFactory.newCameraPosition(CameraPosition.Builder()
+                        .target(LatLng((selectedCarmenFeature.geometry() as Point?)!!.latitude(),
+                            (selectedCarmenFeature.geometry() as Point?)!!.longitude()))
+                        .zoom(14.0)
+                        .build()), 4000)
+                }
+            }
+        }
+    }
+
+    override fun onMapClick(destination: LatLng): Boolean {
+        destinationMarker?.let(mapboxMap!!::removeMarker)
+        destinationMarker = mapboxMap!!.addMarker(MarkerOptions().position(destination))
+
+
+        getRoute(
+            origin = originPoint!!,
+            destination = Point.fromLngLat(destination.longitude, destination.latitude)
+        )
+        btnStart!!.isEnabled = true
+        btnStartwithar!!.isEnabled = true
+        btnStart!!.setBackgroundResource(R.color.mapboxBlue)
+        btnStartwithar!!.setBackgroundResource(R.color.mapboxBlue)
+        return true
+
+    }
+
+    private fun getRoute(origin: Point, destination: Point) {
+        NavigationRoute.builder(this).accessToken(Mapbox.getAccessToken()!!)
+            .origin(origin)
+            .destination(destination)
+            .build()
+            .getRoute(object : Callback<DirectionsResponse> {
+                override fun onResponse(call: Call<DirectionsResponse>, response: Response<DirectionsResponse>) {
+                    // You can get the generic HTTP info about the response
+                    Log.d(TAG, "Response code: " + response.body())
+                    if (response.body() == null) {
+                        Log.d(TAG, "No routes found, make sure you set the right user and access token")
+                        return
+                    }
+                    else if (response.body()!!.routes().size < 1){
+                        Log.e(TAG, "No routes found")
+                        return
+                    }
+                    currentRoute = response.body()!!.routes()[0]
+
+                    //Draw the route on the map
+                    if (navigationMapRoute != null) {
+                        navigationMapRoute!!.removeRoute()
+                    }
+                    else {
+                        navigationMapRoute = NavigationMapRoute(null, mapView, mapboxMap!!, com.mapbox.services.android.navigation.ui.v5.R.style.NavigationMapRoute)
+                    }
+                    navigationMapRoute!!.addRoute(currentRoute)
+                }
+
+                override fun onFailure(call: Call<DirectionsResponse>, t: Throwable) {
+                    Log.e(TAG, "Error: " + t.message)
+                }
+
+            })
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun enableLocationComponent(loadedMapStyle: Style?) {
+        initializeLocationEngine()
+        //Check if permissions are enabled and if not request
+        if (PermissionsManager.areLocationPermissionsGranted(this)) {
+            // Activity the MapboxMap LocationComponent to show user location
+            // Adding in LocationComponentOptions is also an optional parameter
+            locationComponent = mapboxMap!!.locationComponent
+            locationComponent!!.activateLocationComponent(this, loadedMapStyle!!)
+            locationComponent!!.setLocationComponentEnabled(true)
+
+            //Set the component's camera mode
+            locationComponent!!.setCameraMode(CameraMode.TRACKING)
+        }
+
+        else {
+            permissionsManager = PermissionsManager(this)
+            permissionsManager!!.requestLocationPermissions(this)
+        }
+    }
+    @SuppressLint("MissingPermission")
+    private fun initializeLocationEngine() {
+        try {
+            arLocationEngine.requestLocationUpdates(arLocationEngineRequest, locationCallback, mainLooper)
+        } catch (se: SecurityException) {
+            VisionLogger.d(TAG, se.toString())
+        }
+
+        arLocationEngine.getLastLocation(locationCallback)
+    }
+
+    override fun onExplanationNeeded(permissionsToExplain: MutableList<String>?) {
+        Toast.makeText(this, R.string.user_location_permission_explanation, Toast.LENGTH_SHORT).show()
+    }
+
+    override fun onPermissionResult(granted: Boolean) {
+        if (granted) {
+            enableLocationComponent(mapboxMap!!.style)
+        }
+        else {
+            Toast.makeText(this, R.string.user_location_permission_not_granted, Toast.LENGTH_SHORT).show()
+            finish()
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        permissionsManager!!.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        mapView.onStart()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        mapView.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        mapView.onPause()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        mapView.onStop()
+        arLocationEngine.removeLocationUpdates(locationCallback)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle, outPersistentState: PersistableBundle) {
+        super.onSaveInstanceState(outState, outPersistentState)
+        mapView.onSaveInstanceState(outState)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        mapView.onDestroy()
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        mapView.onLowMemory()
+    }
+}
+
+manifest
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.tuk.tukar">
+    <uses-feature android:name="android.hardware.camera"
+        android:required="true" />
+    <uses-feature android:name="android.hardware.camera.autofocus" />
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-feature android:name="android.hardware.location.gps" />
+    <uses-feature android:name="android.hardware.location.network" />
+
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <application
+        android:name=".TukAR"
+        android:allowBackup="true"
+        android:icon="@drawable/symbolmark"
+        android:label="@string/app_name"
+        android:roundIcon="@drawable/symbolmark"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Tukar"
+        android:usesCleartextTraffic="true">
+        <activity
+            android:name=".guide_ebook"
+            android:exported="false" />
+        <activity
+            android:name=".guide_library_3"
+            android:exported="false" />
+        <activity
+            android:name=".guide_library_2"
+            android:exported="false" />
+        <activity
+            android:name=".guide_library"
+            android:exported="false" />
+        <activity
+            android:name=".subway_suin"
+            android:exported="false" />
+        <activity
+            android:name=".subway"
+            android:exported="false" />
+        <activity
+            android:name=".shuttlebus"
+            android:exported="false" />
+        <activity
+            android:name=".cafe"
+            android:exported="false" />
+        <activity
+            android:name=".restaurant"
+            android:exported="false" />
+        <activity
+            android:name=".food"
+            android:exported="false" />
+        <activity
+            android:name=".major"
+            android:exported="false" />
+        <activity
+            android:name=".guide_e_engineering"
+            android:exported="false" />
+        <activity
+            android:name=".guide_second_domitory"
+            android:exported="false" />
+        <activity
+            android:name=".guide_tip"
+            android:exported="false" />
+        <activity
+            android:name=".modelhouse"
+            android:exported="false" />
+        <activity
+            android:name=".guide"
+            android:exported="false" />
+        <activity
+            android:name=".Non_member_menu"
+            android:exported="false" />
+        <activity
+            android:name=".Member_menu"
+            android:exported="false" />
+        <activity
+            android:name=".LocationPermissionHelper"
+            android:exported="false"
+            tools:ignore="Instantiatable" />
+        <activity
+            android:name=".Arnavigation"
+            android:exported="false"
+            tools:ignore="Instantiatable" />
+        <activity
+            android:name=".Arnavigationsearch"
+            android:exported="false"
+            tools:ignore="Instantiatable" />
+        <activity
+            android:name=".Loadingpage"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".Mainmenu"/>
+        <activity android:name=".MainActivity"/>
+    </application>
+</manifest>
